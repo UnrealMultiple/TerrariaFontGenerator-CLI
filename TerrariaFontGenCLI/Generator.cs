@@ -1,13 +1,17 @@
 ﻿using System;
+using System.Drawing;
+using System.Drawing.Imaging;
 using Microsoft.Xna.Framework.Content.Pipeline;
-using Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler;
-using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using System.IO;
 using System.Reflection;
 using ReLogic.Content.Pipeline;
 using System.Linq;
-using System.Text;
+using System.Net.Mime;
+using System.Runtime.InteropServices;
+using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
+using StbImageWriteSharp;
+using Rectangle = System.Drawing.Rectangle;
 
 namespace TerrariaFontGenCLI
 {
@@ -18,170 +22,34 @@ namespace TerrariaFontGenCLI
          
         private static void Main()
         {
-            Console.Clear();
-            Logo();
-            MainMenu();
-
-            
+            using var game = new Generator();
+            game.Run();
         }
-        static void Logo()
-        {
-            //================================= LOGO =================================
-            string resourceName = "TerrariaFontGenCLI.Image.ascii_art.logo.txt";
-            Console.ForegroundColor = ConsoleColor.DarkYellow;
-            Console.OutputEncoding = Encoding.UTF8; // Ensure console can display UTF-8 characters
-            using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
-            using (StreamReader reader = new StreamReader(stream))
-            {
-                string content = reader.ReadToEnd();
-                Console.WriteLine(content);
-            }
-        }
-        static void MainMenu()
-        {
-            const int menuTop = 14;
-
-            while (true)
-            {
-                // In menu
-                Console.SetCursorPosition(0, menuTop);
-                Console.ForegroundColor = ConsoleColor.White;
-                
-                Console.WriteLine("★ SELECT OPTION (PRESS KEY): ★\n");
-
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                Console.WriteLine("[1] Select Language. \n[2] Compile Fonts. \n[3] View Font Load. \n[4] Help. \n");
-                Console.ResetColor();
-                
-                Console.WriteLine("➢ Press Key:");
-
-                // Đặt con trỏ tại dòng nhập
-                Console.SetCursorPosition(14, Console.CursorTop - 1);
-                ConsoleKeyInfo keyInfo = Console.ReadKey();
-
-                // Xóa vùng menu bằng cách ghi đè trắng lên các dòng
-                for (int i = 0; i < 7; i++)
-                {
-                    Console.SetCursorPosition(0, menuTop + i);
-                    Console.Write(new string(' ', 200));
-                }
-
-                Console.SetCursorPosition(0, menuTop);
-
-                switch (keyInfo.Key)
-                {
-                    case ConsoleKey.D1:
-                        Console.WriteLine("You selected [1]: Select Language.");
-
-                        Console.ForegroundColor = ConsoleColor.Magenta;
-                        Console.WriteLine("\n[1] English \n[2] Vietnamese \n[3] Back \n");
-                        Console.ResetColor();
-
-                        Console.WriteLine("Press key:");
-                        Console.SetCursorPosition(14, Console.CursorTop - 1);
-
-                        ConsoleKeyInfo subKey = Console.ReadKey();
-
-                        if (subKey.Key == ConsoleKey.D3) {
-                            int linesToClear1 = 10;
-                            for (int i = 0; i < linesToClear1; i++)
-                            {
-                                Console.SetCursorPosition(0, menuTop + i);
-                                Console.Write(new string(' ', Console.BufferWidth));
-                            }
-                            continue;
-                        };
-                        break;
-
-                    case ConsoleKey.D2:
-                        using (var game = new Generator())
-                        {
-                            game.Run();
-                        }
-                        Console.WriteLine("Press Enter to return to main menu...");
-
-                        ConsoleKeyInfo subKey2 = Console.ReadKey();
-                        if (subKey2.Key == ConsoleKey.Enter)
-                        {
-                            int linesToClear1 = 40;
-                            for (int i = 0; i < linesToClear1; i++)
-                            {
-                                int targetLine = menuTop + i;
-                                if (targetLine < Console.BufferHeight)
-                                {
-                                    Console.SetCursorPosition(0, targetLine);
-                                    Console.Write(new string(' ', Console.BufferWidth));
-                                }
-                            }
-                            continue;
-                        };
-                        break;
-
-                    case ConsoleKey.D3:
-                        Console.WriteLine("YOU SELECTED [3]: VIEW FONT LOAD.\n");
-                        
-                        var totalXMLFile = Directory.EnumerateFiles(Environment.CurrentDirectory, "*.xml").Count();
-                        var totalXNBFile = Directory.EnumerateFiles(Environment.CurrentDirectory, "*.xnb").Count();
-                        
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"Total XML files: {totalXMLFile}");
-                        Console.WriteLine($"Total XNB files: {totalXNBFile}");
-                        Console.ResetColor();
-
-                        break;
-                    case ConsoleKey.D4:
-                        Console.WriteLine("You selected option 4: 4.");
-                        break;
-                    default:
-                        continue;
-                }
-
-                Console.WriteLine("\nPress any key to return to main menu...");
-                Console.ReadKey();
-
-                // Xóa nội dung hiện tại trước khi quay lại menu
-                int linesToClear = 14;
-                for (int i = 0; i < linesToClear; i++)
-                {
-                    Console.SetCursorPosition(0, menuTop + i);
-                    Console.Write(new string(' ', Console.BufferWidth));
-                }
-            }
-        }
+        
 
         public Generator()
         {
             ReLogicPipeLineAssembly = typeof(DynamicFontDescription).Assembly;
-            XnaPipeLineAssembly = typeof(ContentCompiler).Assembly;
-
-            var type = XnaPipeLineAssembly.GetType("Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler.ContentCompiler");
-
-            var constructor = type
-                .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
-                .First();
-            _compiler = (ContentCompiler)constructor.Invoke(null);
-            _compileMethod = type.GetMethod("Compile", BindingFlags.NonPublic | BindingFlags.Instance);
             _graphics = new GraphicsDeviceManager(this);
             _context = new DfgContext(this);
             _importContext = new DfgImporterContext();
             _importer = (ContentImporter<DynamicFontDescription>)Activator.CreateInstance(ReLogicPipeLineAssembly.GetType("ReLogic.Content.Pipeline.DynamicFontImporter"));
             _processor = new DynamicFontProcessor();
-
             Content.RootDirectory = "Content";
         }
 
         protected override void Initialize()
         {
             base.Initialize();
-
             CompileFonts();
-
-            Exit();
-            //Environment.Exit(0);
         }
+
+        private const string SaveDir = "output"; 
 
         private void CompileFonts()
         {
+            Directory.CreateDirectory(SaveDir);
+            
             var descFiles = Directory.EnumerateFiles(Environment.CurrentDirectory, "*.xml").ToList();
 
             Console.WriteLine("Total font files detected: {0}", descFiles.Count);
@@ -204,32 +72,133 @@ namespace TerrariaFontGenCLI
                 var description = _importer.Import(descFilePath, _importContext);
                 Console.WriteLine(" ..Done!");
 
-                var fileName = Path.GetFileNameWithoutExtension(descFileName) + ".xnb";
+                var fileName = Path.GetFileNameWithoutExtension(descFileName) + ".txt";
 
                 Console.Write("Start compiling font.");
                 var content = _processor.Process(description, _context);
                 Console.WriteLine(".Done!");
-
+                
                 Console.Write("Start compiling font content file: {0}", fileName);
-
-                using (var fs = new FileStream(fileName, FileMode.Create))
+                
+                using (var fs = new FileStream(Path.Combine(SaveDir, fileName), FileMode.Create))
+                using (var bw = new BinaryWriter(fs))
                 {
-                    _compileMethod.Invoke(_compiler,
-                        new object[]
-                        {
-                            fs, content, TargetPlatform.Windows, GraphicsProfile.Reach, true, Environment.CurrentDirectory,
-                            Environment.CurrentDirectory
-                        });
+                   Serialize(bw);
+                   bw.Flush();
+                }
+
+                var index = 1;
+                foreach (var page in content._pages)
+                {
+                    SaveTexture2DContentToPng(page.Texture, $"{Path.GetFileNameWithoutExtension(descFileName)}_{index}_A");
+                    index++;
+                    //InspectTextureContent(page.Texture);
                 }
 
                 Console.WriteLine(" ..Done!");
                 Console.WriteLine();
+                continue;
+
+                void Serialize(BinaryWriter writer)
+                {
+                    writer.Write(content._spacing);
+                    writer.Write(content._pages.Max(page => page.LineSpacing));
+                    writer.Write(content._defaultCharacter);
+                    writer.Write(content._pages.Count);
+                    foreach (var page in content._pages)
+                    {
+                        writer.Write(page.Glyphs);
+                        writer.Write(page.Padding);
+                        writer.Write(page.Characters);
+                        writer.Write(page.Kerning);
+                    }
+                }
             }
         }
+        
+        public static void SaveTexture2DContentToPng(Texture2DContent content, string fileName)
+        {
+            // 1. 核心步骤：将 DXT3 转换为 RGBA 格式
+            // 这一步会调用你反编译代码中的 ConvertBitmapType，内部会进行解压
+            Console.WriteLine($"Converting {content.Mipmaps[0].GetType().Name} to RGBA...");
+            content.ConvertBitmapType(typeof(PixelBitmapContent<Microsoft.Xna.Framework.Color>));
 
-        private readonly ContentCompiler _compiler;
+            BitmapContent bitmapContent = content.Mipmaps[0];
+            int width = bitmapContent.Width;
+            int height = bitmapContent.Height;
+    
+            // 此时 rawData 长度应该是 width * height * 4
+            var rawData = bitmapContent.GetPixelData();
 
-        private readonly MethodInfo _compileMethod;
+            // 2. 创建 System.Drawing.Bitmap
+            using (var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb))
+            {
+                BitmapData bmpData = bitmap.LockBits(
+                    new Rectangle(0, 0, width, height),
+                    ImageLockMode.WriteOnly,
+                    bitmap.PixelFormat
+                );
+
+                byte[] processedData = new byte[rawData.Length];
+                try
+                {
+                    // 3. 通道转换 (XNA RGBA -> GDI+ BGRA)
+                    // DXT 解压后的数据顺序是 R, G, B, A，而 Bitmap 内存需要 B, G, R, A
+                    for (var i = 0; i < rawData.Length; i += 4)
+                    {
+                        processedData[i]     = rawData[i + 2]; // Blue
+                        processedData[i + 1] = rawData[i + 1]; // Green
+                        processedData[i + 2] = rawData[i];     // Red
+                        processedData[i + 3] = rawData[i + 3]; // Alpha
+                    }
+
+                    Marshal.Copy(processedData, 0, bmpData.Scan0, processedData.Length);
+                }
+                finally
+                {
+                    bitmap.UnlockBits(bmpData);
+                }
+                
+
+                bitmap.Save(Path.Combine(SaveDir, $"{fileName}.png"), ImageFormat.Png);
+                Console.WriteLine($"Saved: {fileName}.png ({width}x{height})");
+            }
+        }
+        
+        public static void InspectTextureContent(Texture2DContent content)
+        {
+            Console.WriteLine("--- Texture2DContent Inspection ---");
+            Console.WriteLine($"Name: {content.Name}");
+    
+            if (content.Mipmaps == null || content.Mipmaps.Count == 0)
+            {
+                Console.WriteLine("Warning: No Mipmaps found.");
+                return;
+            }
+
+            // 访问最顶层的 Mipmap (Level 0)
+            BitmapContent bitmapContent = content.Mipmaps[0];
+    
+            // 1. 打印具体的类名 (例如: Microsoft.Xna.Framework.Content.Pipeline.Graphics.PixelBitmapContent`1[Microsoft.Xna.Framework.Color])
+            Console.WriteLine($"Internal Type: {bitmapContent.GetType().FullName}");
+    
+            // 2. 打印尺寸
+            Console.WriteLine($"Dimensions: {bitmapContent.Width}x{bitmapContent.Height}");
+
+            // 3. 获取并打印原始数据信息
+            var rawData = bitmapContent.GetPixelData();
+            Console.WriteLine($"Raw Data Length: {rawData.Length} bytes");
+
+            // 4. 计算预期的每像素字节数
+            if (bitmapContent.Width > 0 && bitmapContent.Height > 0)
+            {
+                float bytesPerPixel = (float)rawData.Length / (bitmapContent.Width * bitmapContent.Height);
+                Console.WriteLine($"Bytes Per Pixel (BPP): {bytesPerPixel}");
+            }
+    
+            Console.WriteLine("-----------------------------------\n");
+        }
+        
 
         private readonly DfgContext _context;
 
@@ -240,7 +209,5 @@ namespace TerrariaFontGenCLI
         private readonly DynamicFontProcessor _processor;
 
         public readonly Assembly ReLogicPipeLineAssembly;
-
-        public readonly Assembly XnaPipeLineAssembly;
     }
 }

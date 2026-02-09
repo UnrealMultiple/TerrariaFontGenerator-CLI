@@ -12,6 +12,7 @@
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -53,8 +54,12 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>libs\ReLogic.Content.Pipeline.dll</HintPath>
     </Reference>
+    <Reference Include="StbImageWriteSharp, Version=1.16.7.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\StbImageWriteSharp.1.16.7\lib\netstandard2.0\StbImageWriteSharp.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -66,11 +71,13 @@
     <Compile Include="DfgImporterContext.cs" />
     <Compile Include="DfgContext.cs" />
     <Compile Include="DfgLogger.cs" />
+    <Compile Include="Extension.cs" />
     <Compile Include="Generator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Image\ascii-art\logo.txt" />
